@@ -111,27 +111,30 @@ class Database:
             print(f"Error creating todo: {e}")
             return False
 
-    def delete_todo(self,owner_id,title,status):
+    def delete_todo(self,id):
        try:
            delete_todo = """
-                   delete from todos where owner_id=%s and title=%s and status=%s;
+                   delete from todos where id=%s;
                   """
            cursor = self.db.cursor()
-           cursor.execute(delete_todo, (owner_id, title, status))
+           cursor.execute(delete_todo, (id,))
            self.db.commit()
            return True
        except psycopg2.Error as e:
            print(f"Error deleting todo: {e}")
            return False
 
-    def title_update_todo(self, new_status,title):
+
+
+    def title_update_todo(self, new_status,title,owner_id):
         try:
             title_sql="""
-            update todos set status=%s where title=%s;
+            update todos set status=%s where title=%s and owner_id=%s;
              """
             cursor = self.db.cursor()
-            cursor.execute(title_sql, (new_status,title))
+            cursor.execute(title_sql, (new_status,title,owner_id))
             self.db.commit()
+            return True
         except psycopg2.Error as e:
             print(f"Error updating todo: {e}")
             return False

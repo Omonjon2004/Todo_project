@@ -150,16 +150,19 @@ class Todo:
             case '0':
                 Todo().main()
     def title_update(self):
+        global  session_user
         self.db = Database()
         new_status=input(" New_status >> ")
         title=input("Which Title do you want to update? >> ")
-        user=self.db.title_update_todo(new_status=new_status,title=title)
-        if user:
-            print(f"Title updated successfully")
-            Todo().main()
-        else:
-            print("Title update failed")
-            Todo().update_todo()
+        if session_user:
+            owner_id=session_user[0]
+            user = self.db.title_update_todo(new_status=new_status, title=title,owner_id=owner_id)
+            if user:
+               print(f"Title updated successfully")
+               Todo().main()
+            else:
+               print("Title update failed")
+               Todo().update_todo()
     def deadline_update(self):
         self.db = Database()
         new_deadline=input("New deadline >> ")
@@ -173,20 +176,26 @@ class Todo:
             Todo().update_todo()
     def delete_todo(self):
         global session_user
-        self.db = Database()
-        title = input("Title >> ")
-        status = input("Status >> ")
-
         if session_user:
             owner_id = session_user[0]
-            user = self.db.delete_todo(owner_id=owner_id, title=title, status=status)
+            user = self.db.get_todos(owner_id=owner_id)
             if user:
-                print(f"Todo updated successfully")
-                Todo().main()
+                print(f"Todo list view{user}")
+                todo_id= input("Which Todo do you want to delete? >> ")
+                todo=self.db.delete_todo(todo_id)
+                if todo:
+                    print(f"Todo deleted successfully")
+                    Todo().main()
+                else:
+                    print("Todo delete failed")
+                    Todo().delete_todo()
             else:
-                print("Todo update failed")
+                print("No todo found")
+                UI().main()
         else:
             print("No todo found")
+            UI().main()
+
     def logout(self):
         global session_user
         if session_user:
