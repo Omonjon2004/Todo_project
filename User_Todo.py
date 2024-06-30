@@ -1,15 +1,17 @@
-from db import *
-from hash import *
+import psycopg2
 
+from db import Database
+from hash import Hash
 
 session_user = None
+
 class UI:
     def main(self):
         try:
             menu = """
                    1) Register
                    2) Login
-                   0) Exits
+                   0) Exit
                       >>>"""
 
             match input(menu):
@@ -23,7 +25,6 @@ class UI:
             print(e)
             self.main()
 
-
 class Users:
     def __init__(self):
         self.db = Database()
@@ -35,15 +36,14 @@ class Users:
         password = input("Password >> ")
         phone_number = input("Phone number >> ")
 
-
-        password=Hash.make_password(password)
+        password = Hash.make_password(password)
 
         user_created = self.db.insert_user(fullname=fullname, username=username, password=password,
                                            email=email, phone_number=phone_number)
         if user_created:
             print("User registered successfully")
         else:
-            print("Username or phone number is incorrect, please try again")
+            print("User registration failed. Please try again.")
 
         UI().main()
 
@@ -62,10 +62,10 @@ class Users:
             print("Invalid username or password. Please try again.")
             UI().main()
 
-
 class Todo:
     def __init__(self):
         self.db = Database()
+
     def main(self):
         menu = """
         1) My todos
@@ -73,7 +73,7 @@ class Todo:
         3) Update a todo
         4) Delete a todo
         5) Log out
-        0) Exits
+        0) Exit
         >>> """
 
         match input(menu):
@@ -90,124 +90,125 @@ class Todo:
             case '0':
                 UI().main()
 
-
     def view_todos(self):
         global session_user
         if session_user:
-               owner_id = session_user[0]
-               user=self.db.get_todos(owner_id=owner_id)
-               if user:
-                   print(f"Todo list view{user}")
-                   menu="""
-                    0)Exits
-                   """
-                   match input(menu):
-                       case '0':
-                           Todo().main()
-               else:
-                   menu = """
-                     0)Exits
-                         """
-                   match input(menu):
-                       case '0':
-                           Todo().main()
-                   print("Todo list view failed")
+            owner_id = session_user[0]
+            todos = self.db.get_todos(owner_id=owner_id)
+            if todos:
+                print(f"Todo list: {todos}")
+            else:
+                print("No todos found")
         else:
-            print("No todo found")
+            print("No todos found")
 
+        self.main()
 
     def create_todo(self):
         global session_user
-        self.db = Database()
-
-        title=input("Title >> ")
-        status=input("Status >>")
-        deadline=input("Deadline >> ")
+        title = input("Title >> ")
+        status = input("Status >> ")
+        deadline = input("Deadline >> ")
 
         if session_user:
             owner_id = session_user[0]
-            user = self.db.insert_todo(title=title, status=status, owner_id=owner_id, deadline=deadline)
-            if user:
-                print(f"Todo created successfully")
-                Todo().main()
+            todo_created = self.db.insert_todo(title=title, status=status, owner_id=owner_id, deadline=deadline)
+            if todo_created:
+                print("Todo created successfully")
             else:
                 print("Todo creation failed")
-                Todo().create_todo()
         else:
-            print("No todo found")
+            print("No user session found")
+
+        self.main()
+
     def update_todo(self):
-        print(" What do you want to update? ")
-        menu="""
-           1)Status >> Update
-           2)Deadline >> Update
-           0)Exits
-        """
+        print("What do you want to update?")
+        menu = """
+           1) Status
+           2) Deadline
+           0) Exit
+        >>> """
         match input(menu):
             case '1':
-                self.title_update()
+                self.status_update()
             case '2':
                 self.deadline_update()
             case '0':
-                Todo().main()
-    def title_update(self):
-        global  session_user
-        self.db = Database()
-        new_status=input(" New_status >> ")
-        title=input("Which Title do you want to update? >> ")
+                self.main()
+
+    def status_update(self):
+        global session_user
         if session_user:
-            owner_id=session_user[0]
-            user = self.db.title_update_todo(new_status=new_status, title=title,owner_id=owner_id)
-            if user:
-               print(f"Title updated successfully")
-               Todo().main()
+            owner_id = session_user[0]
+            todos = self.db.get_todos(owner_id=owner_id)
+            if todos:
+                print(todos)
+                todo_id = input("Enter Todo ID to update status >> ")
+                new_status = input("New Status >> ")
+                status_updated = self.db.update_todo_status(new_status=new_status, id=todo_id, owner_id=owner_id)
+                if status_updated:
+                    print("Todo status updated successfully")
+                else:
+                    print("Todo status update failed")
             else:
-               print("Title update failed")
-               Todo().update_todo()
-    def deadline_update(self):
-        self.db = Database()
-        new_deadline=input("New deadline >> ")
-        title=input("Which Title do you want to update? >> ")
-        user=self.db.deadline_update_todo(new_deadline=new_deadline, title=title)
-        if user:
-            print(f"Status updated successfully")
-            Todo().main()
+                print("No todos found")
         else:
-            print("Status update failed")
-            Todo().update_todo()
+            print("No user session found")
+        self.main()
+
+    def deadline_update(self):
+        global session_user
+        if session_user:
+            owner_id = session_user[0]
+            todos = self.db.get_todos(owner_id=owner_id)
+            if todos:
+                print(todos)
+                todo_id = input("Enter Todo ID to update deadline >> ")
+                new_deadline = input("New Deadline >> ")
+                deadline_updated = self.db.update_todo_deadline(new_deadline=new_deadline, id=todo_id, owner_id=owner_id)
+                if deadline_updated:
+                    print("Todo deadline updated successfully")
+                else:
+                    print("Todo deadline update failed")
+            else:
+                print("No todos found")
+        else:
+            print("No user session found")
+        self.main()
+
+
     def delete_todo(self):
         global session_user
         if session_user:
             owner_id = session_user[0]
-            user = self.db.get_todos(owner_id=owner_id)
-            if user:
-                print(f"Todo list view{user}")
-                todo_id= input("Which Todo do you want to delete? >> ")
-                todo=self.db.delete_todo(todo_id)
-                if todo:
-                    print(f"Todo deleted successfully")
-                    Todo().main()
+            todos = self.db.get_todos(owner_id=owner_id)
+            if todos:
+                print(todos)
+                todo_id = input("Enter Todo ID to delete >> ")
+                todo_deleted = self.db.delete_todo(todo_id)
+                if todo_deleted:
+                    print("Todo deleted successfully")
                 else:
-                    print("Todo delete failed")
-                    Todo().delete_todo()
+                    print("Todo deletion failed")
             else:
-                print("No todo found")
-                UI().main()
-        else:
-            print("No todo found")
-            UI().main()
+                print("No user session found")
+
+
+        self.main()
 
     def logout(self):
         global session_user
         if session_user:
-            id=session_user[0]
-            user=self.db.delete_user(id=id)
-            if user:
-                print(f"Todo list view{user}")
-                session_user=None
-                UI().main()
+            user_id=session_user[0]
+            res=self.db.log_out(user_id=user_id)
+            if res:
                 print("Logged out successfully")
+                UI().main()
             else:
-                print("Login failed")
-
+                print("Logout failed")
+                self.main()
+        else:
+            print("No user session found")
 
 
